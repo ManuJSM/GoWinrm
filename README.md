@@ -1,0 +1,2 @@
+# GoWinrm
+Winrm in Go
