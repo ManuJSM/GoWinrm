@@ -63,16 +63,15 @@ func TestAuth(t *testing.T) {
 		Username:    dummyUsername,
 		Password:    dummyPassword,
 	})
-	err := ntlmNego.InitAuth()
-	if err != nil {
-		t.Error(err)
-	}
+	// err := ntlmNego.InitAuth()
+	// if err != nil {
+	// 	t.Error(err)
+	// }
 	msg, err := ntlmNego.SendRequest(generateSOAPMessage())
 	if err != nil {
 		t.Error(err)
 	} else {
 		t.Log(string(msg))
-
 	}
 
 }

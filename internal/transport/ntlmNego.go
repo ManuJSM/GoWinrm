@@ -173,13 +173,10 @@ func (nn *NtlmNego) SendRequest(message []byte) ([]byte, error) {
 	req.Header.Set("Content-Type", `multipart/encrypted;protocol="application/HTTP-SPNEGO-session-encrypted";boundary="Encrypted Boundary"`)
 	resp, _ := nn.httpcli.Do(req)
 
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("error Status Code: %d", resp.StatusCode)
-	}
-
 	decrypted, err := nn.winrmDecrypt(resp)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt failed: %v", err)
 	}
-	return decrypted, nil
+
+	return RespHandler(decrypted, resp.StatusCode)
 }
