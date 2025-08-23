@@ -1,14 +1,15 @@
-package wsmv
+package msg
 
 import (
 	"GoWinrm/internal/utils"
+	"GoWinrm/internal/wsmv"
 	"fmt"
 	"time"
 )
 
 // CreateShell representa un mensaje WSMV para crear un shell remoto
 type CreateShell struct {
-	sessionOpts      SessionOptions
+	sessionOpts      wsmv.SessionOptions
 	shellURI         string
 	iStream          string
 	oStream          string
@@ -23,10 +24,10 @@ type CreateShell struct {
 const UTF8CodePage = 65001
 
 // NewCreateShell crea una nueva instancia de CreateShell
-func NewCreateShell(sessionOpts SessionOptions, shellOpts map[string]any) *CreateShell {
+func NewCreateShell(sessionOpts wsmv.SessionOptions, shellOpts map[string]any) *CreateShell {
 	cs := &CreateShell{
 		sessionOpts: sessionOpts,
-		shellURI:    optOrDefault(shellOpts, "shell_uri", _ResourceURICmd).(string),
+		shellURI:    optOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
 		iStream:     optOrDefault(shellOpts, "i_stream", "stdin").(string),
 		oStream:     optOrDefault(shellOpts, "o_stream", "stdout stderr").(string),
 		codepage:    optOrDefault(shellOpts, "codepage", UTF8CodePage).(int),
@@ -50,10 +51,10 @@ func NewCreateShell(sessionOpts SessionOptions, shellOpts map[string]any) *Creat
 
 // Headers retorna los encabezados para el mensaje CreateShell
 func (cs *CreateShell) Headers() map[string]any {
-	return MergeHeaders(
-		SharedHeaders(cs.sessionOpts),
-		resourceURIShell(cs.shellURI),
-		actionCreate(),
+	return wsmv.MergeHeaders(
+		wsmv.SharedHeaders(cs.sessionOpts),
+		wsmv.ResourceURIShell(cs.shellURI),
+		wsmv.ActionCreate(),
 		cs.headerOpts(),
 	)
 }
@@ -61,27 +62,27 @@ func (cs *CreateShell) Headers() map[string]any {
 // Body retorna el cuerpo para el mensaje CreateShell
 func (cs *CreateShell) Body() map[string]any {
 	return map[string]any{
-		fmt.Sprintf("%s:Shell", NS_WIN_SHELL): cs.shellBody(),
+		fmt.Sprintf("%s:Shell", wsmv.NS_WIN_SHELL): cs.shellBody(),
 	}
 }
 
 // shellBody construye el cuerpo del mensaje Shell
 func (cs *CreateShell) shellBody() map[string]any {
 	body := map[string]any{
-		fmt.Sprintf("%s:InputStreams", NS_WIN_SHELL):  cs.iStream,
-		fmt.Sprintf("%s:OutputStreams", NS_WIN_SHELL): cs.oStream,
+		fmt.Sprintf("%s:InputStreams", wsmv.NS_WIN_SHELL):  cs.iStream,
+		fmt.Sprintf("%s:OutputStreams", wsmv.NS_WIN_SHELL): cs.oStream,
 	}
 
 	if cs.workingDirectory != "" {
-		body[fmt.Sprintf("%s:WorkingDirectory", NS_WIN_SHELL)] = cs.workingDirectory
+		body[fmt.Sprintf("%s:WorkingDirectory", wsmv.NS_WIN_SHELL)] = cs.workingDirectory
 	}
 
 	if cs.idleTimeout != nil {
-		body[fmt.Sprintf("%s:IdleTimeOut", NS_WIN_SHELL)] = formatIdleTimeout(cs.idleTimeout)
+		body[fmt.Sprintf("%s:IdleTimeOut", wsmv.NS_WIN_SHELL)] = formatIdleTimeout(cs.idleTimeout)
 	}
 
 	if len(cs.envVars) > 0 {
-		body[fmt.Sprintf("%s:Environment", NS_WIN_SHELL)] = cs.environmentVarsBody()
+		body[fmt.Sprintf("%s:Environment", wsmv.NS_WIN_SHELL)] = cs.environmentVarsBody()
 	}
 
 	return body
@@ -101,7 +102,7 @@ func (cs *CreateShell) environmentVarsBody() map[string]any {
 	}
 
 	return map[string]any{
-		fmt.Sprintf("%s:Variable", NS_WIN_SHELL): variables,
+		fmt.Sprintf("%s:Variable", wsmv.NS_WIN_SHELL): variables,
 	}
 }
 
@@ -123,25 +124,12 @@ func (cs *CreateShell) headerOpts() map[string]any {
 	}
 
 	return map[string]any{
-		fmt.Sprintf("%s:OptionSet", NS_WSMAN_DMTF): map[string]any{
-			fmt.Sprintf("%s:Option", NS_WSMAN_DMTF): options,
+		fmt.Sprintf("%s:OptionSet", wsmv.NS_WSMAN_DMTF): map[string]any{
+			fmt.Sprintf("%s:Option", wsmv.NS_WSMAN_DMTF): options,
 		},
 	}
 }
 
-// actionCreate retorna la acción de creación
-func actionCreate() map[string]any {
-	return map[string]any{
-		fmt.Sprintf("%s:Action", NS_ADDRESSING): "http://schemas.xmlsoap.org/ws/2004/09/transfer/Create",
-		":attributes!": map[string]any{
-			fmt.Sprintf("%s:Action", NS_ADDRESSING): map[string]any{
-				"mustUnderstand": true,
-			},
-		},
-	}
-}
-
-// formatIdleTimeout formatea el timeout de inactividad
 func formatIdleTimeout(timeout any) string {
 	switch t := timeout.(type) {
 	case string:
@@ -155,7 +143,6 @@ func formatIdleTimeout(timeout any) string {
 	}
 }
 
-// optOrDefault obtiene un valor de las opciones o retorna el valor por defecto
 func optOrDefault(options map[string]any, key string, defaultValue any) any {
 	if value, ok := options[key]; ok {
 		return value

@@ -1,0 +1,108 @@
+package msg
+
+import (
+	"GoWinrm/internal/utils"
+	"GoWinrm/internal/wsmv"
+	"fmt"
+)
+
+// Command representa un mensaje WSMV para ejecutar un comando dentro de una shell remota
+type Command struct {
+	sessionOpts  wsmv.SessionOptions
+	shellID      string
+	command      string
+	arguments    []string
+	commandID    string
+	shellURI     string
+	consoleMode  string
+	skipCmdShell string
+}
+
+// NewCommand crea una nueva instancia de Command
+func NewCommand(sessionOpts wsmv.SessionOptions, cmdOpts map[string]any) *Command {
+	commandID := utils.NewUuid()
+
+	cmd := &Command{
+		sessionOpts:  sessionOpts,
+		commandID:    commandID,
+		shellID:      cmdOpts["shell_id"].(string),
+		command:      cmdOpts["command"].(string),
+		arguments:    optStringSlice(cmdOpts, "arguments", []string{}),
+		shellURI:     optOrDefault(cmdOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		consoleMode:  optOrDefault(cmdOpts, "console_mode_stdin", "TRUE").(string),
+		skipCmdShell: optOrDefault(cmdOpts, "skip_cmd_shell", "FALSE").(string),
+	}
+
+	return cmd
+}
+
+// Headers genera los encabezados para el mensaje Command
+func (c *Command) Headers() map[string]any {
+	headers := wsmv.MergeHeaders(
+		wsmv.SharedHeaders(c.sessionOpts),
+		wsmv.ResourceURIShell(c.shellURI),
+		wsmv.ActionCommand(),
+		wsmv.SelectorShellID(c.shellID),
+	)
+
+	// Solo se agrega OptionSet si se trata de la shell por defecto
+	if c.shellURI == wsmv.RESOURCEURICMD {
+		headers = wsmv.MergeHeaders(headers, c.commandHeaderOpts())
+	}
+
+	return headers
+}
+
+// Body genera el cuerpo del mensaje Command
+func (c *Command) Body() map[string]any {
+	body := map[string]any{
+		fmt.Sprintf("%s:CommandLine", wsmv.NS_WIN_SHELL): c.commandBody(),
+	}
+	return body
+}
+
+func (c *Command) commandBody() map[string]any {
+	body := map[string]any{
+		//FIXME: me dara problemas no poner el comando entre comillas? ''
+		fmt.Sprintf("%s:Command", wsmv.NS_WIN_SHELL): fmt.Sprintf("%s", c.command),
+	}
+
+	if len(c.arguments) > 0 {
+		body[fmt.Sprintf("%s:Arguments", wsmv.NS_WIN_SHELL)] = c.arguments
+	}
+
+	return body
+}
+
+func (c *Command) commandHeaderOpts() map[string]any {
+	options := []map[string]any{
+		{
+			"_": c.consoleMode,
+			":attributes!": map[string]any{
+				"Name": "WINRS_CONSOLEMODE_STDIN",
+			},
+		},
+		{
+			"_": c.skipCmdShell,
+			":attributes!": map[string]any{
+				"Name": "WINRS_SKIP_CMD_SHELL",
+			},
+		},
+	}
+
+	return map[string]any{
+		fmt.Sprintf("%s:OptionSet", wsmv.NS_WSMAN_DMTF): map[string]any{
+			fmt.Sprintf("%s:Option", wsmv.NS_WSMAN_DMTF): options,
+		},
+	}
+}
+
+// optStringSlice es un helper para obtener []string desde map[string]any
+func optStringSlice(opts map[string]any, key string, defaultVal []string) []string {
+	if val, ok := opts[key]; ok {
+		if slice, ok := val.([]string); ok {
+			return slice
+		}
+	}
+	return defaultVal
+}

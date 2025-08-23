@@ -32,17 +32,13 @@ func BuildXML(headers map[string]any, body map[string]any) (string, error) {
 	}
 
 	// Crear header
-	if len(headers) > 0 {
-		if err := createHeader(enc, headers); err != nil {
-			return "", err
-		}
+	if err := createHeader(enc, headers); err != nil {
+		return "", err
 	}
 
 	// Crear body
-	if len(body) > 0 {
-		if err := createBody(enc, body); err != nil {
-			return "", err
-		}
+	if err := createBody(enc, body); err != nil {
+		return "", err
 	}
 
 	// Cerrar Envelope
@@ -64,8 +60,10 @@ func createHeader(enc *xml.Encoder, headers map[string]any) error {
 		return err
 	}
 
-	if err := encodeContent(enc, headers); err != nil {
-		return err
+	if len(headers) > 0 {
+		if err := encodeContent(enc, headers); err != nil {
+			return err
+		}
 	}
 
 	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Header"}})
@@ -78,8 +76,10 @@ func createBody(enc *xml.Encoder, body map[string]any) error {
 		return err
 	}
 
-	if err := encodeContent(enc, body); err != nil {
-		return err
+	if len(body) > 0 {
+		if err := encodeContent(enc, body); err != nil {
+			return err
+		}
 	}
 
 	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Body"}})

@@ -1,6 +1,7 @@
-package wsmv
+package msg
 
 import (
+	. "GoWinrm/internal/wsmv"
 	"fmt"
 	"testing"
 	"time"
@@ -17,8 +18,8 @@ func TestCreateShellSimple(t *testing.T) {
 	}
 
 	// Configurar opciones del shell
-	shellOpts := map[string]interface{}{
-		"shell_uri":         _ResourceURICmd,
+	shellOpts := map[string]any{
+		"shell_uri":         RESOURCEURICMD,
 		"i_stream":          "stdin",
 		"o_stream":          "stdout stderr",
 		"codepage":          65001,
@@ -41,8 +42,8 @@ func TestCreateShellSimple(t *testing.T) {
 	}
 
 	// Test de valores
-	if createShell.shellURI != _ResourceURICmd {
-		t.Errorf("Shell URI esperado: %s, obtenido: %s", _ResourceURICmd, createShell.shellURI)
+	if createShell.shellURI != RESOURCEURICMD {
+		t.Errorf("Shell URI esperado: %s, obtenido: %s", RESOURCEURICMD, createShell.shellURI)
 	}
 
 	if createShell.iStream != "stdin" {

@@ -3,13 +3,14 @@ package wsmv
 import (
 	"GoWinrm/internal/utils"
 	"fmt"
+	"maps"
 	"time"
 )
 
 // Constantes equivalentes a los URI de WSMan y SOAP
 const (
-	_ResourceURICmd       = "http://schemas.microsoft.com/wbem/wsman/1/windows/shell/cmd"
-	ResourceURIPowerShell = "http://schemas.microsoft.com/powershell/Microsoft.PowerShell"
+	RESOURCEURICMD        = "http://schemas.microsoft.com/wbem/wsman/1/windows/shell/cmd"
+	RESOURCEURIPOWERSHELL = "http://schemas.microsoft.com/powershell/Microsoft.PowerShell"
 )
 
 type SessionOptions struct {
@@ -29,9 +30,7 @@ func MergeHeaders(headers ...map[string]any) map[string]any {
 				// Se espera que el valor sea un map[string] any
 				if existingAttr, ok := result[k].(map[string]any); ok {
 					if newAttr, ok2 := v.(map[string]any); ok2 {
-						for k2, v2 := range newAttr {
-							existingAttr[k2] = v2
-						}
+						maps.Copy(existingAttr, newAttr)
 						result[k] = existingAttr
 						continue
 					}
@@ -85,7 +84,7 @@ func SharedHeaders(sessionOpts SessionOptions) map[string]any {
 	}
 }
 
-func resourceURIShell(shellURI string) map[string]any {
+func ResourceURIShell(shellURI string) map[string]any {
 	return map[string]any{
 		fmt.Sprintf("%s:ResourceURI", NS_WSMAN_DMTF): shellURI,
 		":attributes!": map[string]any{
@@ -94,10 +93,6 @@ func resourceURIShell(shellURI string) map[string]any {
 			},
 		},
 	}
-}
-
-func ResourceURICmd() map[string]any {
-	return resourceURIShell(_ResourceURICmd)
 }
 
 func ResourceURIWMI(namespace string) map[string]any {
@@ -116,6 +111,10 @@ func ResourceURIWMI(namespace string) map[string]any {
 
 func ActionGet() map[string]any {
 	return actionWithURL("http://schemas.xmlsoap.org/ws/2004/09/transfer/Get")
+}
+
+func ActionCreate() map[string]any {
+	return actionWithURL("http://schemas.xmlsoap.org/ws/2004/09/transfer/Create")
 }
 
 func ActionDelete() map[string]any {
@@ -160,9 +159,9 @@ func actionWithURL(url string) map[string]any {
 func SelectorShellID(shellID string) map[string]any {
 	return map[string]any{
 		fmt.Sprintf("%s:SelectorSet", NS_WSMAN_DMTF): map[string]any{
-			fmt.Sprintf("%s:Selector", NS_WSMAN_DMTF): shellID,
-			":attributes!": map[string]any{
-				fmt.Sprintf("%s:Selector", NS_WSMAN_DMTF): map[string]any{
+			fmt.Sprintf("%s:Selector", NS_WSMAN_DMTF): map[string]any{
+				"_": shellID,
+				":attributes!": map[string]any{
 					"Name": "ShellId",
 				},
 			},
