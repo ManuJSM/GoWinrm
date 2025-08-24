@@ -19,6 +19,8 @@ type NtlmNego struct {
 	ntlmcli  *client.Client
 }
 
+//FIXME no quiero tener que importar client para las clientoptions, hacer un alias o algo
+
 func NewNtlmNego(endpoint string, opts client.ClientOpts) *NtlmNego {
 	return &NtlmNego{
 		httpcli:  &http.Client{},

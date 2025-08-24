@@ -1,10 +1,10 @@
 package transport
 
 import (
+	"GoWinrm/internal/utils"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/antchfx/xmlquery"
 )
@@ -27,7 +27,7 @@ func raiseIfError(xml string, statusCode int) error {
 	if statusCode == http.StatusUnauthorized {
 		return errors.New("authorization error: received HTTP 401")
 	}
-	doc, err := parseXML(xml)
+	doc, err := utils.ParseXML(xml)
 
 	if err != nil {
 		return err
@@ -46,16 +46,6 @@ func raiseIfError(xml string, statusCode int) error {
 	}
 
 	return fmt.Errorf("http transport error: status=%d, body=%s", statusCode, xml)
-}
-
-func parseXML(xml string) (*xmlquery.Node, error) {
-
-	doc, err := xmlquery.Parse(strings.NewReader(xml))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse WinRM response: %v", err)
-	}
-
-	return doc, nil
 }
 
 func raiseIfWMIError(xml *xmlquery.Node) error {
@@ -86,19 +76,13 @@ func raiseIfSOAPFault(xml *xmlquery.Node) error {
 		return nil
 	}
 
-	code := getNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Code']/*[local-name()='Value']"))
-	subcode := getNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Subcode']/*[local-name()='Value']"))
-	reason := getNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Reason']/*[local-name()='Text']"))
+	code := utils.GetNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Code']/*[local-name()='Value']"))
+	subcode := utils.GetNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Subcode']/*[local-name()='Value']"))
+	reason := utils.GetNodeText(xmlquery.FindOne(fault, ".//*[local-name()='Reason']/*[local-name()='Text']"))
 
 	if code != "" || subcode != "" || reason != "" {
 		return fmt.Errorf("SOAP fault found: code=%s, subcode=%s, reason=%s", code, subcode, reason)
 	}
 
 	return nil
-}
-func getNodeText(n *xmlquery.Node) string {
-	if n == nil {
-		return ""
-	}
-	return n.InnerText()
 }

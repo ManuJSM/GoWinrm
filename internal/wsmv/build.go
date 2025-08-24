@@ -7,7 +7,7 @@ import (
 )
 
 // BuildXML genera el XML del mensaje WSMV
-func BuildXML(headers map[string]any, body map[string]any) (string, error) {
+func BuildXML(headers map[string]any, body map[string]any) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := xml.NewEncoder(&buf)
 	enc.Indent("", "  ")
@@ -28,29 +28,29 @@ func BuildXML(headers map[string]any, body map[string]any) (string, error) {
 	}
 
 	if err := enc.EncodeToken(startElem); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Crear header
 	if err := createHeader(enc, headers); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Crear body
 	if err := createBody(enc, body); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Cerrar Envelope
 	if err := enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Envelope"}}); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if err := enc.Flush(); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return buf.String(), nil
+	return buf.Bytes(), nil
 }
 
 // createHeader crea el elemento Header
