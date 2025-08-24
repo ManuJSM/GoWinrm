@@ -47,8 +47,8 @@ func TestCommandFullMessage(t *testing.T) {
 		t.Fatal("CommandLine no presente o tipo incorrecto")
 	}
 
-	if cmdLine["rsp:Command"] != "\"whoami\"" {
-		t.Errorf("Command esperado '\"whoami\"', recibido: %v", cmdLine["rsp:Command"])
+	if cmdLine["rsp:Command"] != "whoami" {
+		t.Errorf("Command esperado 'whoami', recibido: %v", cmdLine["rsp:Command"])
 	}
 
 	args, ok := cmdLine["rsp:Arguments"].([]string)
@@ -59,6 +59,6 @@ func TestCommandFullMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	} else {
-		fmt.Println(xml)
+		fmt.Println(string(xml))
 	}
 }

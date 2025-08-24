@@ -1,7 +1,6 @@
 package msg
 
 import (
-	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"fmt"
 )
@@ -12,7 +11,6 @@ type Command struct {
 	shellID      string
 	command      string
 	arguments    []string
-	commandID    string
 	shellURI     string
 	consoleMode  string
 	skipCmdShell string
@@ -20,11 +18,9 @@ type Command struct {
 
 // NewCommand crea una nueva instancia de Command
 func NewCommand(sessionOpts wsmv.SessionOptions, cmdOpts map[string]any) *Command {
-	commandID := utils.NewUuid()
 
 	cmd := &Command{
 		sessionOpts:  sessionOpts,
-		commandID:    commandID,
 		shellID:      cmdOpts["shell_id"].(string),
 		command:      cmdOpts["command"].(string),
 		arguments:    optStringSlice(cmdOpts, "arguments", []string{}),

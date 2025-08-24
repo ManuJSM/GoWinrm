@@ -40,13 +40,15 @@ func TestCmd(t *testing.T) {
 		t.Error(err)
 	}
 
-	idCommand, err := cmd.SendCommand("whoami", "")
+	idCommand, err := cmd.SendCommand("whoami")
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Log("idCommand: ", idCommand)
 	}
 
+	err = cmd.cleanCommand(idCommand)
+	if err != nil {
+		t.Error(err)
+	}
 	err = cmd.Close()
 	if err != nil {
 		t.Error(err)
