@@ -1,6 +1,9 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // convierte segundos a formato ISO8601 duración.
 func Iso8601Duration(seconds int) string {
@@ -32,4 +35,16 @@ func Iso8601Duration(seconds int) string {
 	}
 
 	return isoStr
+}
+func FormatIdleTimeout(timeout any) string {
+	switch t := timeout.(type) {
+	case string:
+		return t
+	case int:
+		return Iso8601Duration(t)
+	case time.Duration:
+		return Iso8601Duration(int(t.Seconds()))
+	default:
+		return ""
+	}
 }

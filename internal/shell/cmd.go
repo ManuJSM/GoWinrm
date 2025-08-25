@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"GoWinrm/internal/log"
 	"GoWinrm/internal/transport"
 	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
@@ -21,13 +20,15 @@ func NewCmdShell(transport *transport.NtlmNego, opts *wsmv.SessionOptions) *Cmd 
 		sessionOpts: opts,
 	}
 
-	return &Cmd{
+	c := &Cmd{
 		Shell: s,
 	}
-
+	s.sendCommand = c.sendCommand
+	s.open = c.open
+	return c
 }
 
-func (c *Cmd) Open() error {
+func (c *Cmd) open() error {
 
 	shellOpts := map[string]any{
 		"shell_uri":         c.shellURI,
@@ -60,7 +61,7 @@ func (c *Cmd) Open() error {
 
 }
 
-func (c *Cmd) SendCommand(command string, arguments ...string) (string, error) {
+func (c *Cmd) sendCommand(command string, arguments ...string) (string, error) {
 
 	cmdOpts := map[string]any{
 		"shell_id":           c.shellID,
@@ -82,29 +83,5 @@ func (c *Cmd) SendCommand(command string, arguments ...string) (string, error) {
 	commandId := utils.GetCommandId(string(resp))
 
 	return commandId, nil
-
-}
-
-func (c *Cmd) cleanCommand(commandId string) error {
-
-	log.Debug("Cleaning up command " + commandId)
-
-	cmdOpts := map[string]any{
-		"shell_id":   c.shellID,
-		"command_id": commandId,
-	}
-
-	cleanMsg := msg.NewCleanCommand(*c.sessionOpts, cmdOpts)
-	xml, err := wsmv.BuildXML(cleanMsg.Headers(), cleanMsg.Body())
-	if err != nil {
-		return err
-	}
-
-	_, err = c.transport.SendRequest(xml)
-	if err != nil {
-		return err
-	}
-
-	return nil
 
 }

@@ -4,7 +4,6 @@ import (
 	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"fmt"
-	"time"
 )
 
 // CreateShell representa un mensaje WSMV para crear un shell remoto
@@ -49,7 +48,6 @@ func NewCreateShell(sessionOpts wsmv.SessionOptions, shellOpts map[string]any) *
 	return cs
 }
 
-// Headers retorna los encabezados para el mensaje CreateShell
 func (cs *CreateShell) Headers() map[string]any {
 	return wsmv.MergeHeaders(
 		wsmv.SharedHeaders(cs.sessionOpts),
@@ -78,7 +76,7 @@ func (cs *CreateShell) shellBody() map[string]any {
 	}
 
 	if cs.idleTimeout != nil {
-		body[fmt.Sprintf("%s:IdleTimeOut", wsmv.NS_WIN_SHELL)] = formatIdleTimeout(cs.idleTimeout)
+		body[fmt.Sprintf("%s:IdleTimeOut", wsmv.NS_WIN_SHELL)] = utils.FormatIdleTimeout(cs.idleTimeout)
 	}
 
 	if len(cs.envVars) > 0 {
@@ -88,7 +86,6 @@ func (cs *CreateShell) shellBody() map[string]any {
 	return body
 }
 
-// environmentVarsBody construye el cuerpo para las variables de entorno
 func (cs *CreateShell) environmentVarsBody() map[string]any {
 	variables := make([]map[string]any, 0, len(cs.envVars))
 
@@ -106,7 +103,6 @@ func (cs *CreateShell) environmentVarsBody() map[string]any {
 	}
 }
 
-// headerOpts construye las opciones del encabezado
 func (cs *CreateShell) headerOpts() map[string]any {
 	options := []map[string]any{
 		{
@@ -127,19 +123,6 @@ func (cs *CreateShell) headerOpts() map[string]any {
 		fmt.Sprintf("%s:OptionSet", wsmv.NS_WSMAN_DMTF): map[string]any{
 			fmt.Sprintf("%s:Option", wsmv.NS_WSMAN_DMTF): options,
 		},
-	}
-}
-
-func formatIdleTimeout(timeout any) string {
-	switch t := timeout.(type) {
-	case string:
-		return t
-	case int:
-		return utils.Iso8601Duration(t)
-	case time.Duration:
-		return utils.Iso8601Duration(int(t.Seconds()))
-	default:
-		return ""
 	}
 }
 

@@ -57,6 +57,7 @@ func (c *Command) Body() map[string]any {
 	return body
 }
 
+// FIXME los argumentos en ese formato no los lee bien
 func (c *Command) commandBody() map[string]any {
 	body := map[string]any{
 		//FIXME: me dara problemas no poner el comando entre comillas? ''

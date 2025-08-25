@@ -1,9 +1,11 @@
 package shell
 
 import (
+	"GoWinrm/internal/log"
 	"GoWinrm/internal/transport"
 	"GoWinrm/internal/wsmv"
 	"GoWinrm/internal/wsmv/msg"
+	"fmt"
 )
 
 const (
@@ -24,6 +26,8 @@ type Shell struct {
 	shellURI    string
 	transport   *transport.NtlmNego
 	sessionOpts *wsmv.SessionOptions
+	sendCommand func(string, ...string) (string, error)
+	open        func() error
 }
 
 func (s *Shell) Close() error {
@@ -49,4 +53,86 @@ func (s *Shell) Close() error {
 	s.shellID = ""
 
 	return nil
+}
+
+func (s *Shell) readOutput(commandId string) ([]byte, error) {
+	cmdOpts := map[string]any{
+		"shell_id":   s.shellID,
+		"command_id": commandId,
+	}
+
+	outputMsg := msg.NewOutputCommand(*s.sessionOpts, cmdOpts)
+
+	xml, err := wsmv.BuildXML(outputMsg.Headers(), outputMsg.Body())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := s.transport.SendRequest(xml)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+
+}
+
+func (s *Shell) RunCommand(command string, arguments ...string) error {
+	//TODO implementar una logica de reintentos (2)
+	if s.shellID == "" {
+		s.open()
+	}
+	commandId, err := s.sendCommand(command, arguments...)
+	if err != nil {
+		return err
+	}
+	defer s.cleanCommand(commandId)
+	log.Debug("creating command_id:" + commandId + "on shell_id " + s.shellID)
+
+	resp, err := s.readOutput(commandId)
+	if err != nil {
+		return err
+	}
+	ok := handlerOC(resp)
+
+	if !ok {
+		//TODO logica de seguir extrayendo el comando
+		return fmt.Errorf("not Implemented: output too long")
+	}
+
+	return nil
+
+}
+
+func handlerOC(resp []byte) bool {
+	handler := NewCOHandler()
+	finished := handler.HandleOutput(resp)
+	if finished {
+		fmt.Println("STDOUT: ", handler.Stdout.String())
+		fmt.Println("STDERR: ", handler.Stderr.String())
+		fmt.Println("EXITCODE: ", handler.ExitCode)
+	}
+	return finished
+}
+
+func (c *Shell) cleanCommand(commandId string) error {
+
+	log.Debug("cleaning up command " + commandId)
+
+	cmdOpts := map[string]any{
+		"shell_id":   c.shellID,
+		"command_id": commandId,
+	}
+
+	cleanMsg := msg.NewCleanCommand(*c.sessionOpts, cmdOpts)
+	xml, err := wsmv.BuildXML(cleanMsg.Headers(), cleanMsg.Body())
+	if err != nil {
+		return err
+	}
+
+	_, err = c.transport.SendRequest(xml)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
