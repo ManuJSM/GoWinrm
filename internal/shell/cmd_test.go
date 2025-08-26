@@ -35,13 +35,13 @@ func TestCmd(t *testing.T) {
 
 	cmd := NewCmdShell(ntlmNego, &sessionOpts)
 
-	err := cmd.RunCommand("systeminfo")
+	oc, err := cmd.RunCommand("cmd", "/c", "whoami")
 	if err != nil {
 		t.Error(err)
-	}
-	err = cmd.RunCommand("whoami /priv")
-	if err != nil {
-		t.Error(err)
+	} else {
+		t.Log("STDOUT: ", oc.Stdout.String())
+		t.Log("STDERR: ", oc.Stderr.String())
+		t.Log("EXITCODE: ", oc.ExitCode)
 	}
 
 	err = cmd.Close()

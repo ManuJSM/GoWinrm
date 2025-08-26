@@ -3,9 +3,9 @@ package shell
 import (
 	"GoWinrm/internal/log"
 	"GoWinrm/internal/transport"
+	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"GoWinrm/internal/wsmv/msg"
-	"fmt"
 )
 
 const (
@@ -75,42 +75,38 @@ func (s *Shell) readOutput(commandId string) ([]byte, error) {
 
 }
 
-func (s *Shell) RunCommand(command string, arguments ...string) error {
+func (s *Shell) RunCommand(command string, arguments ...string) (*utils.OutputCommand, error) {
 	//TODO implementar una logica de reintentos (2)
+
 	if s.shellID == "" {
 		s.open()
 	}
 	commandId, err := s.sendCommand(command, arguments...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer s.cleanCommand(commandId)
-	log.Debug("creating command_id:" + commandId + "on shell_id " + s.shellID)
 
-	resp, err := s.readOutput(commandId)
-	if err != nil {
-		return err
-	}
-	ok := handlerOC(resp)
+	log.Debug("creating command_id:" + commandId + " on shell_id " + s.shellID)
 
-	if !ok {
-		//TODO logica de seguir extrayendo el comando
-		return fmt.Errorf("not Implemented: output too long")
-	}
-
-	return nil
-
+	return s.handleOutput(commandId)
 }
 
-func handlerOC(resp []byte) bool {
-	handler := NewCOHandler()
-	finished := handler.HandleOutput(resp)
-	if finished {
-		fmt.Println("STDOUT: ", handler.Stdout.String())
-		fmt.Println("STDERR: ", handler.Stderr.String())
-		fmt.Println("EXITCODE: ", handler.ExitCode)
+func (s *Shell) handleOutput(commandId string) (*utils.OutputCommand, error) {
+
+	output := &utils.OutputCommand{}
+	finished := false
+
+	for !finished {
+
+		resp, err := s.readOutput(commandId)
+		if err != nil {
+			return nil, err
+		}
+		finished = utils.ParseOutput(resp, output)
 	}
-	return finished
+
+	return output, nil
 }
 
 func (c *Shell) cleanCommand(commandId string) error {

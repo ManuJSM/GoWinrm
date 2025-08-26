@@ -57,15 +57,20 @@ func (c *Command) Body() map[string]any {
 	return body
 }
 
-// FIXME los argumentos en ese formato no los lee bien
 func (c *Command) commandBody() map[string]any {
-	body := map[string]any{
-		//FIXME: me dara problemas no poner el comando entre comillas? ''
-		fmt.Sprintf("%s:Command", wsmv.NS_WIN_SHELL): fmt.Sprintf("%s", c.command),
-	}
 
+	body := map[string]any{
+		//FIXME: me dara problemas no poner el comando entre comillas? '' ... no parece ...
+		fmt.Sprintf("%s:Command", wsmv.NS_WIN_SHELL): c.command,
+	}
 	if len(c.arguments) > 0 {
-		body[fmt.Sprintf("%s:Arguments", wsmv.NS_WIN_SHELL)] = c.arguments
+		args := make([]map[string]any, 0)
+
+		for _, argument := range c.arguments {
+			arg := map[string]any{"_": argument}
+			args = append(args, arg)
+		}
+		body[fmt.Sprintf("%s:Arguments", wsmv.NS_WIN_SHELL)] = args
 	}
 
 	return body

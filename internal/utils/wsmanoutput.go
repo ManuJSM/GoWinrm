@@ -1,7 +1,6 @@
-package shell
+package utils
 
 import (
-	"GoWinrm/internal/utils"
 	"encoding/base64"
 	"strconv"
 	"strings"
@@ -9,14 +8,10 @@ import (
 	"github.com/antchfx/xmlquery"
 )
 
-type COHandler struct {
+type OutputCommand struct {
 	Stdout   strings.Builder
 	Stderr   strings.Builder
 	ExitCode int
-}
-
-func NewCOHandler() *COHandler {
-	return &COHandler{}
 }
 
 func isCommandDone(respDoc *xmlquery.Node) bool {
@@ -27,16 +22,16 @@ func isCommandDone(respDoc *xmlquery.Node) bool {
 	return len(nodes) > 0
 }
 
-func (coh *COHandler) HandleOutput(xml []byte) (finish bool) {
+func ParseOutput(xml []byte, oc *OutputCommand) (finish bool) {
 
 	outputs := make(map[string][]string)
 
-	doc, _ := utils.ParseXML(string(xml))
+	doc, _ := ParseXML(string(xml))
 	nodes := xmlquery.Find(doc, "/*[local-name()='Envelope']/*[local-name()='Body']/*[local-name()='ReceiveResponse']/*[local-name()='Stream']")
 	finish = isCommandDone(doc)
 
 	if finish {
-		coh.ExitCode = getExitCode(doc)
+		oc.ExitCode = getExitCode(doc)
 	}
 
 	for _, node := range nodes {
@@ -48,18 +43,18 @@ func (coh *COHandler) HandleOutput(xml []byte) (finish bool) {
 		if nameAttr == "" {
 			continue
 		}
-		output := utils.GetNodeText(node)
+		output := GetNodeText(node)
 		outputs[nameAttr] = append(outputs[nameAttr], output)
 
 	}
 
 	for _, o := range outputs["stdout"] {
 		data, _ := base64.StdEncoding.DecodeString(o)
-		coh.Stdout.Write(data)
+		oc.Stdout.Write(data)
 	}
 	for _, o := range outputs["stderr"] {
 		data, _ := base64.StdEncoding.DecodeString(o)
-		coh.Stderr.Write(data)
+		oc.Stderr.Write(data)
 	}
 
 	return
