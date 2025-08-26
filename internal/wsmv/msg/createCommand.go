@@ -60,7 +60,6 @@ func (c *Command) Body() map[string]any {
 func (c *Command) commandBody() map[string]any {
 
 	body := map[string]any{
-		//FIXME: me dara problemas no poner el comando entre comillas? '' ... no parece ...
 		fmt.Sprintf("%s:Command", wsmv.NS_WIN_SHELL): c.command,
 	}
 	if len(c.arguments) > 0 {

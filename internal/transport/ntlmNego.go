@@ -13,22 +13,21 @@ import (
 	"github.com/ManuJSM/GoNtlm/client"
 )
 
-type NtlmNego struct {
+type ntlmNego struct {
 	httpcli  *http.Client
 	endpoint string
 	ntlmcli  *client.Client
 }
+type NegotiateOpts = client.ClientOpts
 
-//FIXME no quiero tener que importar client para las clientoptions, hacer un alias o algo
-
-func NewNtlmNego(endpoint string, opts client.ClientOpts) *NtlmNego {
-	return &NtlmNego{
+func NewNtlmNego(endpoint string, opts *NegotiateOpts) *ntlmNego {
+	return &ntlmNego{
 		httpcli:  &http.Client{},
 		endpoint: endpoint,
 		ntlmcli:  client.NewClient(opts),
 	}
 }
-func (nn *NtlmNego) issueChallengeResponse(authToken string) error {
+func (nn *ntlmNego) issueChallengeResponse(authToken string) error {
 	req, _ := http.NewRequest("POST", nn.endpoint, bytes.NewBuffer([]byte("")))
 	req.Header.Set("Authorization", "Negotiate "+authToken)
 	req.Header.Set("Connection", "Keep-Alive")
@@ -47,7 +46,7 @@ func (nn *NtlmNego) issueChallengeResponse(authToken string) error {
 	return fmt.Errorf("error: %d", resp.StatusCode)
 }
 
-func (nn *NtlmNego) InitAuth() error {
+func (nn *ntlmNego) initAuth() error {
 
 	// Paso 1: mensaje inicial
 	auth1Encoded := base64.StdEncoding.EncodeToString(nn.ntlmcli.Type1Request())
@@ -81,7 +80,7 @@ func (nn *NtlmNego) InitAuth() error {
 	return nn.issueChallengeResponse(auth3Encoded)
 }
 
-func (nn *NtlmNego) seal(message []byte) ([]byte, error) {
+func (nn *ntlmNego) seal(message []byte) ([]byte, error) {
 	sealmsg, err := nn.ntlmcli.SealMessage(message)
 	if err != nil {
 		return nil, err
@@ -98,7 +97,7 @@ func (nn *NtlmNego) seal(message []byte) ([]byte, error) {
 	return result, nil
 }
 
-func (nn *NtlmNego) winrmDecrypt(resp *http.Response) ([]byte, error) {
+func (nn *ntlmNego) winrmDecrypt(resp *http.Response) ([]byte, error) {
 
 	contentType := resp.Header.Get("Content-Type")
 	if matched, _ := regexp.MatchString(`(?i)^application/soap\+xml`, contentType); matched {
@@ -117,7 +116,6 @@ func (nn *NtlmNego) winrmDecrypt(resp *http.Response) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	// Force binary encoding: body is already []byte in Go
 	re := regexp.MustCompile(`(?s)^.*Content-Type: application/octet-stream\r\n(.*)--Encrypted.*$`)
 	matches := re.FindSubmatch(body)
 	if len(matches) < 2 {
@@ -155,10 +153,10 @@ func body(message string, length int, contentType ...string) string {
 	}, "\r\n") + "\r\n"
 }
 
-func (nn *NtlmNego) SendRequest(message []byte) ([]byte, error) {
+func (nn *ntlmNego) SendRequest(message []byte) ([]byte, error) {
 
 	if !nn.ntlmcli.IsSession() {
-		err := nn.InitAuth()
+		err := nn.initAuth()
 		if err != nil {
 			return nil, err
 		}

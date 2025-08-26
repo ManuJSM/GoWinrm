@@ -8,7 +8,7 @@ import (
 	"github.com/antchfx/xmlquery"
 )
 
-type OutputCommand struct {
+type Output struct {
 	Stdout   strings.Builder
 	Stderr   strings.Builder
 	ExitCode int
@@ -22,7 +22,7 @@ func isCommandDone(respDoc *xmlquery.Node) bool {
 	return len(nodes) > 0
 }
 
-func ParseOutput(xml []byte, oc *OutputCommand) (finish bool) {
+func ParseOutput(xml []byte, oc *Output) (finish bool) {
 
 	outputs := make(map[string][]string)
 

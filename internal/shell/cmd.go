@@ -8,42 +8,43 @@ import (
 	"time"
 )
 
-type Cmd struct {
-	*Shell
+var shellOpts = map[string]any{
+	"shell_uri":         wsmv.RESOURCEURICMD,
+	"i_stream":          "stdin",
+	"o_stream":          "stdout stderr",
+	"codepage":          65001,
+	"noprofile":         "FALSE",
+	"working_directory": "C:\\Users\\",
+	"idle_timeout":      300 * time.Second, // 5 minutos
+	"env_vars": map[string]string{
+		"PATH":     "C:\\Windows\\System32;C:\\Windows",
+		"TEMP":     "C:\\Temp",
+		"LANGUAGE": "en_US.UTF-8",
+	},
 }
 
-func NewCmdShell(transport *transport.NtlmNego, opts *wsmv.SessionOptions) *Cmd {
+type cmd struct {
+	*baseShell
+}
 
-	s := &Shell{
+func NewCmdShell(transport transport.Transport, opts *wsmv.SessionOptions) Shell {
+
+	s := &baseShell{
 		transport:   transport,
 		shellURI:    wsmv.RESOURCEURICMD,
 		sessionOpts: opts,
 	}
 
-	c := &Cmd{
-		Shell: s,
+	c := &cmd{
+		baseShell: s,
 	}
 	s.sendCommand = c.sendCommand
 	s.open = c.open
 	return c
 }
 
-func (c *Cmd) open() error {
+func (c *cmd) open() error {
 
-	shellOpts := map[string]any{
-		"shell_uri":         c.shellURI,
-		"i_stream":          "stdin",
-		"o_stream":          "stdout stderr",
-		"codepage":          65001,
-		"noprofile":         "FALSE",
-		"working_directory": "C:\\Users\\",
-		"idle_timeout":      300 * time.Second, // 5 minutos
-		"env_vars": map[string]string{
-			"PATH":     "C:\\Windows\\System32;C:\\Windows",
-			"TEMP":     "C:\\Temp",
-			"LANGUAGE": "en_US.UTF-8",
-		},
-	}
 	msg := msg.NewCreateShell(*c.sessionOpts, shellOpts)
 
 	xml, err := wsmv.BuildXML(msg.Headers(), msg.Body())
@@ -61,7 +62,7 @@ func (c *Cmd) open() error {
 
 }
 
-func (c *Cmd) sendCommand(command string, arguments ...string) (string, error) {
+func (c *cmd) sendCommand(command string, arguments ...string) (string, error) {
 
 	cmdOpts := map[string]any{
 		"shell_id":           c.shellID,

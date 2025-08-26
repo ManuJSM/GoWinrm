@@ -19,7 +19,7 @@ var (
 func TestCmd(t *testing.T) {
 	endpoint := "http://192.168.1.6:5985/wsman"
 
-	ntlmNego := transport.NewNtlmNego(endpoint, client.ClientOpts{
+	ntlmNego := transport.NewNtlmNego(endpoint, &client.ClientOpts{
 		Domain:      dummyDomain,
 		Workstation: dummyWorkstation,
 		Username:    dummyUsername,
@@ -35,7 +35,7 @@ func TestCmd(t *testing.T) {
 
 	cmd := NewCmdShell(ntlmNego, &sessionOpts)
 
-	oc, err := cmd.RunCommand("cmd", "/c", "whoami")
+	oc, err := cmd.RunCommand("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "ps")
 	if err != nil {
 		t.Error(err)
 	} else {

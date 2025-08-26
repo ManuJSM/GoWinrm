@@ -21,16 +21,21 @@ var FAULTS_FOR_RESET = []uint32{
 	TOO_MANY_COMMANDS, // Maximum commands per user exceeded
 }
 
-type Shell struct {
+type Shell interface {
+	RunCommand(command string, arguments ...string) (*utils.Output, error)
+	Close() error
+}
+
+type baseShell struct {
 	shellID     string
 	shellURI    string
-	transport   *transport.NtlmNego
+	transport   transport.Transport
 	sessionOpts *wsmv.SessionOptions
 	sendCommand func(string, ...string) (string, error)
 	open        func() error
 }
 
-func (s *Shell) Close() error {
+func (s *baseShell) Close() error {
 	if s.shellID == "" {
 		return nil
 	}
@@ -55,7 +60,7 @@ func (s *Shell) Close() error {
 	return nil
 }
 
-func (s *Shell) readOutput(commandId string) ([]byte, error) {
+func (s *baseShell) readOutput(commandId string) ([]byte, error) {
 	cmdOpts := map[string]any{
 		"shell_id":   s.shellID,
 		"command_id": commandId,
@@ -75,7 +80,7 @@ func (s *Shell) readOutput(commandId string) ([]byte, error) {
 
 }
 
-func (s *Shell) RunCommand(command string, arguments ...string) (*utils.OutputCommand, error) {
+func (s *baseShell) RunCommand(command string, arguments ...string) (*utils.Output, error) {
 	//TODO implementar una logica de reintentos (2)
 
 	if s.shellID == "" {
@@ -92,9 +97,9 @@ func (s *Shell) RunCommand(command string, arguments ...string) (*utils.OutputCo
 	return s.handleOutput(commandId)
 }
 
-func (s *Shell) handleOutput(commandId string) (*utils.OutputCommand, error) {
+func (s *baseShell) handleOutput(commandId string) (*utils.Output, error) {
 
-	output := &utils.OutputCommand{}
+	output := &utils.Output{}
 	finished := false
 
 	for !finished {
@@ -109,7 +114,7 @@ func (s *Shell) handleOutput(commandId string) (*utils.OutputCommand, error) {
 	return output, nil
 }
 
-func (c *Shell) cleanCommand(commandId string) error {
+func (c *baseShell) cleanCommand(commandId string) error {
 
 	log.Debug("cleaning up command " + commandId)
 

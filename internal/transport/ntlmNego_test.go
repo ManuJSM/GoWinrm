@@ -43,7 +43,7 @@ func generateSOAPMessage() []byte {
 func TestAuth(t *testing.T) {
 	endpoint := "http://192.168.1.6:5985/wsman"
 
-	ntlmNego := NewNtlmNego(endpoint, client.ClientOpts{
+	ntlmNego := NewNtlmNego(endpoint, &client.ClientOpts{
 		Domain:      dummyDomain,
 		Workstation: dummyWorkstation,
 		Username:    dummyUsername,
