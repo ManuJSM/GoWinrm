@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"fmt"
 )
@@ -13,14 +14,14 @@ type OutputCommand struct {
 	outStreams  string
 }
 
-func NewOutputCommand(sessionOpts wsmv.SessionOptions, shellOpts map[string]any) *OutputCommand {
+func NewOutputCommand(sessionOpts wsmv.SessionOptions, shellOpts utils.Arguments) *OutputCommand {
 
 	return &OutputCommand{
 		sessionOpts: sessionOpts,
-		shellURI:    optOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		shellURI:    utils.OptOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
 		shellID:     shellOpts["shell_id"].(string),
 		commandID:   shellOpts["command_id"].(string),
-		outStreams:  optOrDefault(shellOpts, "o_streams", "stdout stderr").(string),
+		outStreams:  utils.OptOrDefault(shellOpts, "o_streams", "stdout stderr").(string),
 	}
 }
 func (oc *OutputCommand) headerOpts() map[string]any {

@@ -41,7 +41,7 @@ func generateSOAPMessage() []byte {
 }
 
 func TestAuth(t *testing.T) {
-	endpoint := "http://192.168.1.6:5985/wsman"
+	endpoint := "http://localhost:5985/wsman"
 
 	ntlmNego := NewNtlmNego(endpoint, &client.ClientOpts{
 		Domain:      dummyDomain,
@@ -49,10 +49,7 @@ func TestAuth(t *testing.T) {
 		Username:    dummyUsername,
 		Password:    dummyPassword,
 	})
-	// err := ntlmNego.InitAuth()
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+
 	msg, err := ntlmNego.SendRequest(generateSOAPMessage())
 	if err != nil {
 		t.Error(err)

@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"GoWinrm/internal/log"
 	"bytes"
 	"encoding/base64"
 	"errors"
@@ -20,6 +21,8 @@ type ntlmNego struct {
 }
 type NegotiateOpts = client.ClientOpts
 
+const userAgent = "TEST-USER-AGENT"
+
 func NewNtlmNego(endpoint string, opts *NegotiateOpts) *ntlmNego {
 	return &ntlmNego{
 		httpcli:  &http.Client{},
@@ -27,13 +30,31 @@ func NewNtlmNego(endpoint string, opts *NegotiateOpts) *ntlmNego {
 		ntlmcli:  client.NewClient(opts),
 	}
 }
-func (nn *ntlmNego) issueChallengeResponse(authToken string) error {
-	req, _ := http.NewRequest("POST", nn.endpoint, bytes.NewBuffer([]byte("")))
+
+func createAuthRequest(authToken string, endpoint string) *http.Request {
+
+	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer([]byte("")))
 	req.Header.Set("Authorization", "Negotiate "+authToken)
 	req.Header.Set("Connection", "Keep-Alive")
 	req.Header.Set("Content-Type", "application/soap+xml;charset=UTF-8")
+	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := nn.httpcli.Do(req)
+	return req
+}
+
+func createSendRequest(endpoint string, message []byte) *http.Request {
+	req, _ := http.NewRequest("POST", endpoint, bytes.NewReader(message))
+	req.Header.Set("Content-Type", `multipart/encrypted;protocol="application/HTTP-SPNEGO-session-encrypted";boundary="Encrypted Boundary"`)
+	req.Header.Set("User-Agent", userAgent)
+
+	return req
+}
+
+func (nn *ntlmNego) issueChallengeResponse(auth3Token string) error {
+
+	type3req := createAuthRequest(auth3Token, nn.endpoint)
+
+	resp, err := nn.httpcli.Do(type3req)
 	if err != nil {
 		return err
 	}
@@ -49,13 +70,11 @@ func (nn *ntlmNego) issueChallengeResponse(authToken string) error {
 func (nn *ntlmNego) initAuth() error {
 
 	// Paso 1: mensaje inicial
-	auth1Encoded := base64.StdEncoding.EncodeToString(nn.ntlmcli.Type1Request())
+	auth1Token := base64.StdEncoding.EncodeToString(nn.ntlmcli.Type1Request())
 
-	req1, _ := http.NewRequest("POST", nn.endpoint, bytes.NewBuffer([]byte("")))
-	req1.Header.Set("Authorization", "Negotiate "+auth1Encoded)
-	req1.Header.Set("Content-Type", "application/soap+xml;charset=UTF-8")
-	req1.Header.Set("Connection", "Keep-Alive")
-	resp1, err := nn.httpcli.Do(req1)
+	type1req := createAuthRequest(auth1Token, nn.endpoint)
+
+	resp1, err := nn.httpcli.Do(type1req)
 	if err != nil {
 		return err
 	}
@@ -161,22 +180,25 @@ func (nn *ntlmNego) SendRequest(message []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+
+	log.Debug(string(message) + "\n")
+
 	sealed, err := nn.seal(message)
 	if err != nil {
 		return nil, err
 	}
 	post := body(string(sealed), len(message))
-	req, err := http.NewRequest("POST", nn.endpoint, bytes.NewReader([]byte(post)))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", `multipart/encrypted;protocol="application/HTTP-SPNEGO-session-encrypted";boundary="Encrypted Boundary"`)
+
+	req := createSendRequest(nn.endpoint, []byte(post))
+
 	resp, _ := nn.httpcli.Do(req)
 
 	decrypted, err := nn.winrmDecrypt(resp)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt failed: %v", err)
 	}
+
+	log.Debug(string(decrypted) + "\n")
 
 	return RespHandler(decrypted, resp.StatusCode)
 }

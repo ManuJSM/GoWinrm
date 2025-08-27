@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 )
 
@@ -10,13 +11,12 @@ type CloseShell struct {
 	shellURI    string
 }
 
-// Constructor
-func NewCloseShell(sessionOpts wsmv.SessionOptions, shellOpts map[string]any) *CloseShell {
+func NewCloseShell(sessionOpts wsmv.SessionOptions, shellOpts utils.Arguments) *CloseShell {
 
 	return &CloseShell{
 		sessionOpts: sessionOpts,
 		shellID:     shellOpts["shell_id"].(string),
-		shellURI:    optOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		shellURI:    utils.OptOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
 	}
 }
 

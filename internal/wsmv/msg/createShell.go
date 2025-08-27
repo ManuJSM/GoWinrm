@@ -23,14 +23,14 @@ type CreateShell struct {
 const UTF8CodePage = 65001
 
 // NewCreateShell crea una nueva instancia de CreateShell
-func NewCreateShell(sessionOpts wsmv.SessionOptions, shellOpts map[string]any) *CreateShell {
+func NewCreateShell(sessionOpts wsmv.SessionOptions, shellOpts utils.Arguments) *CreateShell {
 	cs := &CreateShell{
 		sessionOpts: sessionOpts,
-		shellURI:    optOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
-		iStream:     optOrDefault(shellOpts, "i_stream", "stdin").(string),
-		oStream:     optOrDefault(shellOpts, "o_stream", "stdout stderr").(string),
-		codepage:    optOrDefault(shellOpts, "codepage", UTF8CodePage).(int),
-		noprofile:   optOrDefault(shellOpts, "noprofile", "FALSE").(string),
+		shellURI:    utils.OptOrDefault(shellOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		iStream:     utils.OptOrDefault(shellOpts, "i_stream", "stdin").(string),
+		oStream:     utils.OptOrDefault(shellOpts, "o_stream", "stdout stderr").(string),
+		codepage:    utils.OptOrDefault(shellOpts, "codepage", UTF8CodePage).(int),
+		noprofile:   utils.OptOrDefault(shellOpts, "noprofile", "FALSE").(string),
 	}
 
 	if workingDir, ok := shellOpts["working_directory"]; ok {
@@ -124,11 +124,4 @@ func (cs *CreateShell) headerOpts() map[string]any {
 			fmt.Sprintf("%s:Option", wsmv.NS_WSMAN_DMTF): options,
 		},
 	}
-}
-
-func optOrDefault(options map[string]any, key string, defaultValue any) any {
-	if value, ok := options[key]; ok {
-		return value
-	}
-	return defaultValue
 }

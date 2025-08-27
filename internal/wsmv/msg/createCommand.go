@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"fmt"
 )
@@ -17,16 +18,16 @@ type Command struct {
 }
 
 // NewCommand crea una nueva instancia de Command
-func NewCommand(sessionOpts wsmv.SessionOptions, cmdOpts map[string]any) *Command {
+func NewCommand(sessionOpts wsmv.SessionOptions, cmdOpts utils.Arguments) *Command {
 
 	cmd := &Command{
 		sessionOpts:  sessionOpts,
 		shellID:      cmdOpts["shell_id"].(string),
 		command:      cmdOpts["command"].(string),
-		arguments:    optStringSlice(cmdOpts, "arguments", []string{}),
-		shellURI:     optOrDefault(cmdOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
-		consoleMode:  optOrDefault(cmdOpts, "console_mode_stdin", "TRUE").(string),
-		skipCmdShell: optOrDefault(cmdOpts, "skip_cmd_shell", "FALSE").(string),
+		arguments:    utils.OptStringSlice(cmdOpts, "arguments", []string{}),
+		shellURI:     utils.OptOrDefault(cmdOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		consoleMode:  utils.OptOrDefault(cmdOpts, "console_mode_stdin", "TRUE").(string),
+		skipCmdShell: utils.OptOrDefault(cmdOpts, "skip_cmd_shell", "FALSE").(string),
 	}
 
 	return cmd
@@ -96,14 +97,4 @@ func (c *Command) commandHeaderOpts() map[string]any {
 			fmt.Sprintf("%s:Option", wsmv.NS_WSMAN_DMTF): options,
 		},
 	}
-}
-
-// optStringSlice es un helper para obtener []string desde map[string]any
-func optStringSlice(opts map[string]any, key string, defaultVal []string) []string {
-	if val, ok := opts[key]; ok {
-		if slice, ok := val.([]string); ok {
-			return slice
-		}
-	}
-	return defaultVal
 }

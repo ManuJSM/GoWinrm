@@ -7,11 +7,13 @@ import (
 
 var logger *slog.Logger
 
+const debug = false
+
 func getLogger() *slog.Logger {
 	if logger == nil {
 		var handler slog.Handler
 
-		if true {
+		if debug {
 			handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 				Level: slog.LevelDebug,
 			})

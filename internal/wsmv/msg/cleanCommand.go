@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"GoWinrm/internal/utils"
 	"GoWinrm/internal/wsmv"
 	"fmt"
 )
@@ -14,13 +15,13 @@ type CleanCommand struct {
 	shellURI    string
 }
 
-func NewCleanCommand(sessionOpts wsmv.SessionOptions, cmdOpts map[string]any) *CleanCommand {
+func NewCleanCommand(sessionOpts wsmv.SessionOptions, cmdOpts utils.Arguments) *CleanCommand {
 
 	cCmd := &CleanCommand{
 		sessionOpts: sessionOpts,
 		shellID:     cmdOpts["shell_id"].(string),
 		commandID:   cmdOpts["command_id"].(string),
-		shellURI:    optOrDefault(cmdOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
+		shellURI:    utils.OptOrDefault(cmdOpts, "shell_uri", wsmv.RESOURCEURICMD).(string),
 	}
 
 	return cCmd
