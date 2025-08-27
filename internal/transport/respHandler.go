@@ -25,7 +25,7 @@ func raiseIfError(xml string, statusCode int) error {
 	}
 
 	if statusCode == http.StatusUnauthorized {
-		return errors.New("authorization error: received HTTP 401")
+		return errors.New("authorization error: HTTP 401")
 	}
 	doc, err := utils.ParseXML(xml)
 

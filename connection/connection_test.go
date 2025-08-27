@@ -23,7 +23,7 @@ func TestCmd(t *testing.T) {
 
 	conn := NewConnection(conf)
 
-	oc, err := conn.Shell.RunCommand("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", "whoami /priv")
+	oc, err := conn.Shell.RunCommand("whoami")
 	if err != nil {
 		t.Error(err)
 	} else {

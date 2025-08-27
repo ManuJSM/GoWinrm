@@ -29,8 +29,8 @@ func getLogger() *slog.Logger {
 	return logger
 }
 
-func Debug(msg string, args ...any) {
+func Debug(msg string) {
 	logger := getLogger()
 
-	logger.Debug(msg, args...)
+	logger.Debug(msg)
 }

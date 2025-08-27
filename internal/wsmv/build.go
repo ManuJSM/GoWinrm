@@ -2,224 +2,118 @@ package wsmv
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
+	"maps"
 )
 
-// BuildXML genera el XML del mensaje WSMV
 func BuildXML(headers map[string]any, body map[string]any) ([]byte, error) {
 	var buf bytes.Buffer
-	enc := xml.NewEncoder(&buf)
-	enc.Indent("", "  ")
-	buf.WriteString(xml.Header)
+	buf.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 
-	// <s:Envelope ...namespaces>
-	startElem := xml.StartElement{
-		Name: xml.Name{Local: NS_SOAP_ENV + ":Envelope"},
-		Attr: []xml.Attr{},
+	// <s:Envelope ...>
+	fmt.Fprintf(&buf, "<%s:Envelope", NS_SOAP_ENV)
+	for k, v := range Namespaces {
+		fmt.Fprintf(&buf, ` %s="%s"`, k, v)
 	}
+	buf.WriteString(">\n")
 
-	// Añadimos atributos xmlns para namespaces
-	for prefix, uri := range Namespaces {
-		startElem.Attr = append(startElem.Attr, xml.Attr{
-			Name:  xml.Name{Local: prefix},
-			Value: uri,
-		})
-	}
-
-	if err := enc.EncodeToken(startElem); err != nil {
+	// Header
+	buf.WriteString(fmt.Sprintf("  <%s:Header>\n", NS_SOAP_ENV))
+	if err := writeMap(&buf, headers, "    "); err != nil {
 		return nil, err
 	}
+	buf.WriteString(fmt.Sprintf("  </%s:Header>\n", NS_SOAP_ENV))
 
-	// Crear header
-	if err := createHeader(enc, headers); err != nil {
+	// Body
+	buf.WriteString(fmt.Sprintf("  <%s:Body>\n", NS_SOAP_ENV))
+	if err := writeMap(&buf, body, "    "); err != nil {
 		return nil, err
 	}
+	buf.WriteString(fmt.Sprintf("  </%s:Body>\n", NS_SOAP_ENV))
 
-	// Crear body
-	if err := createBody(enc, body); err != nil {
-		return nil, err
-	}
-
-	// Cerrar Envelope
-	if err := enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Envelope"}}); err != nil {
-		return nil, err
-	}
-
-	if err := enc.Flush(); err != nil {
-		return nil, err
-	}
+	// </s:Envelope>
+	buf.WriteString(fmt.Sprintf("</%s:Envelope>", NS_SOAP_ENV))
 
 	return buf.Bytes(), nil
 }
 
-// createHeader crea el elemento Header
-func createHeader(enc *xml.Encoder, headers map[string]any) error {
-	startElem := xml.StartElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Header"}}
-	if err := enc.EncodeToken(startElem); err != nil {
-		return err
-	}
-
-	if len(headers) > 0 {
-		if err := encodeContent(enc, headers); err != nil {
-			return err
-		}
-	}
-
-	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Header"}})
-}
-
-// createBody crea el elemento Body
-func createBody(enc *xml.Encoder, body map[string]any) error {
-	startElem := xml.StartElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Body"}}
-	if err := enc.EncodeToken(startElem); err != nil {
-		return err
-	}
-
-	if len(body) > 0 {
-		if err := encodeContent(enc, body); err != nil {
-			return err
-		}
-	}
-
-	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: NS_SOAP_ENV + ":Body"}})
-}
-
-// encodeContent codifica el contenido de un mapa
-func encodeContent(enc *xml.Encoder, data map[string]any) error {
-	for key, value := range data {
+func writeMap(buf *bytes.Buffer, data map[string]any, indent string) error {
+	for key, val := range data {
 		if key == ":attributes!" {
 			continue
 		}
 
-		if err := encodeElement(enc, key, value, data); err != nil {
-			return err
+		switch v := val.(type) {
+		case map[string]any:
+			if err := writeComplexElement(buf, key, v, indent); err != nil {
+				return err
+			}
+		case []map[string]any:
+			for _, item := range v {
+				if err := writeComplexElement(buf, key, item, indent); err != nil {
+					return err
+				}
+			}
+		default:
+			writeSimpleElement(buf, key, fmt.Sprintf("%v", v), data, indent)
 		}
 	}
 	return nil
 }
 
-// encodeElement codifica un elemento individual
-func encodeElement(enc *xml.Encoder, tagName string, value any, parentData map[string]any) error {
-	switch v := value.(type) {
-	case []map[string]any:
-		// Slice de elementos complejos
-		for _, item := range v {
-			if err := encodeComplexElement(enc, tagName, item, parentData); err != nil {
-				return err
-			}
-		}
-		return nil
+func writeComplexElement(buf *bytes.Buffer, tag string, content map[string]any, indent string) error {
+	attrs := extractAttributes(tag, content, nil)
+	buf.WriteString(indent)
+	buf.WriteString("<" + tag)
+	writeAttrs(buf, attrs)
+	buf.WriteString(">")
 
-	case map[string]any:
-		// Elemento complejo único
-		return encodeComplexElement(enc, tagName, v, parentData)
-
-	default:
-		// Valor simple
-		return encodeSimpleElement(enc, tagName, value, parentData)
-	}
-}
-
-// encodeComplexElement codifica un elemento complejo
-func encodeComplexElement(enc *xml.Encoder, tagName string, item map[string]any, parentData map[string]any) error {
-	// Obtener atributos
-	attrs := getAttributes(tagName, item, parentData)
-
-	startElem := xml.StartElement{
-		Name: xml.Name{Local: tagName},
-		Attr: attrs,
-	}
-
-	if err := enc.EncodeToken(startElem); err != nil {
-		return err
-	}
-
-	// Manejar contenido especial "_" que representa el texto del elemento
-	if content, ok := item["_"]; ok {
-		if err := enc.EncodeToken(xml.CharData(fmt.Sprintf("%v", content))); err != nil {
+	if text, ok := content["_"]; ok {
+		fmt.Fprintf(buf, "%v", text)
+	} else {
+		buf.WriteString("\n")
+		if err := writeMap(buf, content, indent+"  "); err != nil {
 			return err
 		}
-	} else {
-		// Codificar elementos hijos
-		for key, value := range item {
-			if key == ":attributes!" || key == "_" {
-				continue
-			}
-			if err := encodeElement(enc, key, value, item); err != nil {
-				return err
-			}
-		}
+		buf.WriteString(indent)
 	}
 
-	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: tagName}})
+	fmt.Fprintf(buf, "</%s>\n", tag)
+	return nil
 }
 
-// encodeSimpleElement codifica un elemento simple
-func encodeSimpleElement(enc *xml.Encoder, tagName string, value any, parentData map[string]any) error {
-	// Obtener atributos del padre para este elemento
-	var attrs []xml.Attr
-	if parentAttrs, ok := parentData[":attributes!"].(map[string]any); ok {
-		if elemAttrs, ok := parentAttrs[tagName].(map[string]any); ok {
-			for attrName, attrValue := range elemAttrs {
-				attrs = append(attrs, createAttr(attrName, attrValue))
+func writeSimpleElement(buf *bytes.Buffer, tag, value string, parent map[string]any, indent string) {
+	attrs := extractAttributes(tag, nil, parent)
+	buf.WriteString(indent)
+	buf.WriteString("<" + tag)
+	writeAttrs(buf, attrs)
+	buf.WriteString(">")
+	buf.WriteString(value)
+	fmt.Fprintf(buf, "</%s>\n", tag)
+}
+
+func writeAttrs(buf *bytes.Buffer, attrs map[string]any) {
+	for k, v := range attrs {
+		fmt.Fprintf(buf, ` %s="%v"`, k, v)
+	}
+}
+
+func extractAttributes(tag string, self map[string]any, parent map[string]any) map[string]any {
+	out := map[string]any{}
+
+	if parent != nil {
+		if parentAttrs, ok := parent[":attributes!"].(map[string]any); ok {
+			if attrs, ok := parentAttrs[tag].(map[string]any); ok {
+				maps.Copy(out, attrs)
 			}
 		}
 	}
 
-	startElem := xml.StartElement{
-		Name: xml.Name{Local: tagName},
-		Attr: attrs,
-	}
-
-	if err := enc.EncodeToken(startElem); err != nil {
-		return err
-	}
-
-	if err := enc.EncodeToken(xml.CharData(fmt.Sprintf("%v", value))); err != nil {
-		return err
-	}
-
-	return enc.EncodeToken(xml.EndElement{Name: xml.Name{Local: tagName}})
-}
-
-// getAttributes obtiene los atributos para un elemento
-func getAttributes(tagName string, item map[string]any, parentData map[string]any) []xml.Attr {
-	var attrs []xml.Attr
-
-	// Atributos del padre
-	if parentAttrs, ok := parentData[":attributes!"].(map[string]any); ok {
-		if elemAttrs, ok := parentAttrs[tagName].(map[string]any); ok {
-			for attrName, attrValue := range elemAttrs {
-				attrs = append(attrs, createAttr(attrName, attrValue))
-			}
+	if self != nil {
+		if attrs, ok := self[":attributes!"].(map[string]any); ok {
+			maps.Copy(out, attrs)
 		}
 	}
 
-	// Atributos del elemento mismo
-	if itemAttrs, ok := item[":attributes!"].(map[string]any); ok {
-		for attrName, attrValue := range itemAttrs {
-			attrs = append(attrs, createAttr(attrName, attrValue))
-		}
-	}
-
-	return attrs
-}
-
-// createAttr crea un atributo XML
-func createAttr(attrName string, attrValue any) xml.Attr {
-	// Manejar atributos booleanos (mustUnderstand)
-	if b, ok := attrValue.(bool); ok {
-		if b {
-			attrValue = "true"
-		} else {
-			attrValue = "false"
-		}
-	}
-
-	// Atributo sin namespace
-	return xml.Attr{
-		Name:  xml.Name{Local: attrName},
-		Value: fmt.Sprintf("%v", attrValue),
-	}
+	return out
 }
