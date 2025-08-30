@@ -1,10 +1,11 @@
 package wsmv
 
 import (
-	"GoWinrm/internal/utils"
 	"fmt"
 	"maps"
 	"time"
+
+	"github.com/ManuJSM/GoWinrm/internal/utils"
 )
 
 // Constantes equivalentes a los URI de WSMan y SOAP

@@ -1,3 +1,5 @@
+github.com/ManuJSM/GoNtlm v0.0.0-20250828170443-219a00207e93 h1:X7TZohRC6wf6+LoqR4q7y5tbXYifHO1Kgjv7H8fKmkM=
+github.com/ManuJSM/GoNtlm v0.0.0-20250828170443-219a00207e93/go.mod h1:rBJnUqd7KUcuvGDXLUJhYhqqK8ZHPXy/72+x/rZ87P8=
 github.com/antchfx/xmlquery v1.4.4 h1:mxMEkdYP3pjKSftxss4nUHfjBhnMk4imGoR96FRY2dg=
 github.com/antchfx/xmlquery v1.4.4/go.mod h1:AEPEEPYE9GnA2mj5Ur2L5Q5/2PycJ0N9Fusrx9b12fc=
 github.com/antchfx/xpath v1.3.3 h1:tmuPQa1Uye0Ym1Zn65vxPgfltWb/Lxu2jeqIGteJSRs=

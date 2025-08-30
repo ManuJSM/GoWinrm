@@ -2,8 +2,6 @@ package transport
 
 import (
 	"testing"
-
-	"github.com/ManuJSM/GoNtlm/client"
 )
 
 var (
@@ -43,7 +41,7 @@ func generateSOAPMessage() []byte {
 func TestAuth(t *testing.T) {
 	endpoint := "http://localhost:5985/wsman"
 
-	ntlmNego := NewNtlmNego(endpoint, &client.ClientOpts{
+	ntlmNego := NewNtlmNego(endpoint, &NegotiateOpts{
 		Domain:      dummyDomain,
 		Workstation: dummyWorkstation,
 		Username:    dummyUsername,

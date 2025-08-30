@@ -1,11 +1,12 @@
 package shell
 
 import (
-	"GoWinrm/internal/transport"
-	"GoWinrm/internal/utils"
-	"GoWinrm/internal/wsmv"
-	"GoWinrm/internal/wsmv/msg"
 	"time"
+
+	"github.com/ManuJSM/GoWinrm/internal/transport"
+	"github.com/ManuJSM/GoWinrm/internal/utils"
+	"github.com/ManuJSM/GoWinrm/internal/wsmv"
+	"github.com/ManuJSM/GoWinrm/internal/wsmv/msg"
 )
 
 var shellOpts = map[string]any{

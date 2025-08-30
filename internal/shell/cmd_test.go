@@ -1,12 +1,11 @@
 package shell
 
 import (
-	"GoWinrm/internal/transport"
-	"GoWinrm/internal/wsmv"
 	"testing"
 	"time"
 
-	"github.com/ManuJSM/GoNtlm/client"
+	"github.com/ManuJSM/GoWinrm/internal/transport"
+	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 func TestCmd(t *testing.T) {
 	endpoint := "http://localhost:5985/wsman"
 
-	ntlmNego := transport.NewNtlmNego(endpoint, &client.ClientOpts{
+	ntlmNego := transport.NewNtlmNego(endpoint, &transport.NegotiateOpts{
 		Domain:      dummyDomain,
 		Workstation: dummyWorkstation,
 		Username:    dummyUsername,

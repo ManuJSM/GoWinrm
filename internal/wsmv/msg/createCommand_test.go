@@ -1,10 +1,11 @@
 package msg
 
 import (
-	"GoWinrm/internal/wsmv"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
 func TestCommandFullMessage(t *testing.T) {

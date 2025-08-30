@@ -1,8 +1,10 @@
-package connection
+package connection_test
 
 import (
-	"GoWinrm/internal/utils"
 	"testing"
+
+	"github.com/ManuJSM/GoWinrm"
+	"github.com/ManuJSM/GoWinrm/internal/utils"
 )
 
 var args = utils.Arguments{
@@ -14,14 +16,14 @@ var args = utils.Arguments{
 
 func TestCmd(t *testing.T) {
 
-	conf, err := NewConf(args)
+	conf, err := GoWinrm.NewConf(args)
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	conn := NewConnection(conf)
+	conn := GoWinrm.NewConnection(conf)
 
 	oc, err := conn.Shell.RunCommand("whoami")
 	if err != nil {

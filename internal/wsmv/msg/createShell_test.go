@@ -1,15 +1,16 @@
 package msg
 
 import (
-	. "GoWinrm/internal/wsmv"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
 func TestCreateShellSimple(t *testing.T) {
 	// Configurar opciones de sesión
-	sessionOpts := SessionOptions{
+	sessionOpts := wsmv.SessionOptions{
 		Endpoint:         "http://192.168.1.6:5985/wsman",
 		MaxEnvelopeSize:  153600,
 		SessionID:        "123e4567-e89b-12d3-a456-426614174000",
@@ -19,7 +20,7 @@ func TestCreateShellSimple(t *testing.T) {
 
 	// Configurar opciones del shell
 	shellOpts := map[string]any{
-		"shell_uri":         RESOURCEURICMD,
+		"shell_uri":         wsmv.RESOURCEURICMD,
 		"i_stream":          "stdin",
 		"o_stream":          "stdout stderr",
 		"codepage":          65001,
@@ -42,8 +43,8 @@ func TestCreateShellSimple(t *testing.T) {
 	}
 
 	// Test de valores
-	if createShell.shellURI != RESOURCEURICMD {
-		t.Errorf("Shell URI esperado: %s, obtenido: %s", RESOURCEURICMD, createShell.shellURI)
+	if createShell.shellURI != wsmv.RESOURCEURICMD {
+		t.Errorf("Shell URI esperado: %s, obtenido: %s", wsmv.RESOURCEURICMD, createShell.shellURI)
 	}
 
 	if createShell.iStream != "stdin" {
@@ -76,7 +77,7 @@ func TestCreateShellSimple(t *testing.T) {
 		t.Error("OutputStreams no está en el body")
 	}
 
-	xml, err := BuildXML(headers, body)
+	xml, err := wsmv.BuildXML(headers, body)
 	if err != nil {
 		t.Error(err)
 	} else {

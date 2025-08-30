@@ -1,11 +1,11 @@
 package transport
 
 import (
-	"GoWinrm/internal/utils"
 	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/ManuJSM/GoWinrm/internal/utils"
 	"github.com/antchfx/xmlquery"
 )
 

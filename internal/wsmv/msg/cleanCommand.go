@@ -1,9 +1,11 @@
 package msg
 
 import (
-	"GoWinrm/internal/utils"
-	"GoWinrm/internal/wsmv"
 	"fmt"
+
+	"github.com/ManuJSM/GoWinrm/internal/utils"
+
+	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
 const terminateSignal = "http://schemas.microsoft.com/wbem/wsman/1/windows/shell/signal/terminate"

@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"GoWinrm/internal/log"
 	"bytes"
 	"encoding/base64"
 	"errors"
@@ -11,15 +10,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ManuJSM/GoNtlm/client"
+	"github.com/ManuJSM/GoNtlm"
+	"github.com/ManuJSM/GoWinrm/internal/log"
 )
 
 type ntlmNego struct {
 	httpcli  *http.Client
 	endpoint string
-	ntlmcli  *client.Client
+	ntlmcli  *GoNtlm.Client
 }
-type NegotiateOpts = client.ClientOpts
+type NegotiateOpts = GoNtlm.ClientOpts
 
 const userAgent = "TEST-USER-AGENT"
 
@@ -27,7 +27,7 @@ func NewNtlmNego(endpoint string, opts *NegotiateOpts) *ntlmNego {
 	return &ntlmNego{
 		httpcli:  &http.Client{},
 		endpoint: endpoint,
-		ntlmcli:  client.NewClient(opts),
+		ntlmcli:  GoNtlm.NewClient(opts),
 	}
 }
 
