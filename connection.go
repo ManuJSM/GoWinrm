@@ -78,6 +78,6 @@ func NewConnection(connConf *ConnConf) *Connection {
 	// Retorna una conexión con shell sobre ese transporte
 	return &Connection{
 		transport: t,
-		Shell:     shell.NewCmdShell(t, connConf.SessionOptions),
+		Shell:     shell.NewPsShell(t, connConf.SessionOptions),
 	}
 }
