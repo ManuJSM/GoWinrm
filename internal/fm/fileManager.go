@@ -1,18 +1,27 @@
 package fm
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
-	"github.com/ManuJSM/GoWinrm/internal/log"
 	"github.com/ManuJSM/GoWinrm/internal/shell"
 	"github.com/ManuJSM/GoWinrm/internal/transport"
+	"github.com/ManuJSM/GoWinrm/internal/utils"
 	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
-const chunkSize = 5900
+const chunkSize = 5800
+
+var (
+	tempPath       = os.TempDir()
+	zipTempPath    = tempPath + "\\temp.zip"
+	base64TempPath = tempPath + "\\temp.b64"
+	binTempPath    = tempPath + "\\temp.bin"
+)
 
 type FileManager struct {
 	shell shell.Shell
@@ -26,11 +35,11 @@ type File struct {
 
 func (fm *FileManager) UploadFile(localpath, remotepath string) error {
 
-	// Preparar archivos para transferencia
-	// files, err := ft.prepareFiles(localPaths, remotePath)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("error preparing files: %w", err)
-	// }
+	//Preparar archivos para transferencia
+	file, err := fm.prepareFiles(localpath)
+	if err != nil {
+		return fmt.Errorf("error preparing files: %v", err)
+	}
 
 	// Verificar archivos existentes en destino
 	// err = ft.checkRemoteFiles(files)
@@ -39,7 +48,7 @@ func (fm *FileManager) UploadFile(localpath, remotepath string) error {
 	// }
 
 	// Transferir archivos
-	err := fm.transferFile(File{SrcPath: localpath, DstPath: remotepath, Utd: false})
+	err = fm.streamUpload(file, remotepath)
 	if err != nil {
 		return fmt.Errorf("error transferring files: %w", err)
 	}
@@ -65,67 +74,69 @@ func (fm *FileManager) UploadFile(localpath, remotepath string) error {
 
 }
 
-func (fm *FileManager) transferFile(file File) error {
+func (fm *FileManager) prepareFiles(localpath string) ([]byte, error) {
+	//TODO soporte para carpetas?
 
-	if !file.Utd {
-		log.Debug(fmt.Sprintf("Skipping %s (already up to date)", file.SrcPath))
-	}
-
-	bytesTransferred, err := fm.streamUpload(file.SrcPath, file.DstPath)
-	if err != nil {
-		return fmt.Errorf("error uploading %s: %v", file.SrcPath, err)
-	}
-
-	log.Debug(fmt.Sprintf("Uploaded %s (%d bytes)", file.SrcPath, bytesTransferred))
-
-	return nil
+	return utils.ZipFileToMemory(localpath)
 }
 
-func (fm *FileManager) streamUpload(src string, dst string) (int64, error) {
+func (fm *FileManager) streamUpload(buf []byte, dst string) error {
 	var sendBytes int64
-
-	file, err := os.Open(src)
-	if err != nil {
-		return sendBytes, fmt.Errorf("error opening file: %w", err)
-	}
-	defer file.Close()
+	totalSize := len(buf)
 
 	buffer := make([]byte, chunkSize)
-
-	initScript := fmt.Sprintf(`$to = "%s";$parent = Split-Path $to;if(!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }`, dst)
-
-	output, err := fm.shell.RunCommand(initScript)
-	if err != nil || output.ExitCode != 0 {
-		return sendBytes, fmt.Errorf("error creando archivo remoto")
-	}
+	reader := bytes.NewReader(buf)
 
 	for {
-		n, err := file.Read(buffer)
+		n, err := reader.Read(buffer)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return sendBytes, fmt.Errorf("error reading file: %w", err)
+			return fmt.Errorf("error reading file: %w", err)
 		}
 
 		encoded := base64.StdEncoding.EncodeToString(buffer[:n])
 
-		writeScript := fmt.Sprintf(`$bytes = [Convert]::FromBase64String("%s");$fs = [System.IO.File]::Open('%s', 'Append', 'Write', 'ReadWrite');$fs.Write($bytes, 0, $bytes.Length);$fs.Close()`, encoded, dst)
+		writeScript := fmt.Sprintf("echo %s > %s &amp; certutil -decode %s %s &amp; type %s >> %s &amp;del %s", encoded, base64TempPath, base64TempPath, binTempPath, binTempPath, zipTempPath, binTempPath)
 
 		output, err := fm.shell.RunCommand(writeScript)
 		if err != nil || output.ExitCode != 0 {
-			return sendBytes, fmt.Errorf("error escribiendo en el archivo, %v", output.Stderr.String())
-
+			return fmt.Errorf("error escribiendo en el archivo, %v", output.Stderr.String())
 		}
 
 		sendBytes += int64(n)
+		showProgress(int64(totalSize), sendBytes)
 	}
 
-	return sendBytes, nil
+	command := fmt.Sprintf(`Expand-Archive -Path '%s' -DestinationPath '%s'`, zipTempPath, dst)
+	output, err := fm.shell.RunCommand(shell.PsPath + " -NoProfile -Command " + command)
+	if err != nil || output.ExitCode != 0 {
+		return fmt.Errorf("error descomprimiendo, %v", output.Stderr.String())
+	}
+	output, err = fm.shell.RunCommand("del " + tempPath + "\\temp.*")
+	if err != nil || output.ExitCode != 0 {
+		return fmt.Errorf("error descomprimiendo, %v", output.Stderr.String())
+	}
+
+	return nil
 }
 
 func NewFileManager(transport transport.Transport, opt *wsmv.SessionOptions) *FileManager {
 	return &FileManager{
-		shell: shell.NewPsShell(transport, opt),
+		shell: shell.NewCmdShell(transport, opt),
 	}
+}
+
+func showProgress(totalSize, sendBytes int64) {
+	progress := (sendBytes * 100) / totalSize
+
+	os.Stdout.WriteString("\r")
+	os.Stdout.WriteString("[*] ")
+	os.Stdout.WriteString(strconv.Itoa(int(progress)))
+	os.Stdout.WriteString("%")
+	if progress >= 100 {
+		fmt.Println()
+	}
+
 }

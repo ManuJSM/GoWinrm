@@ -8,7 +8,7 @@ import (
 	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
-const psPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+const PsPath = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
 
 type Ps struct {
 	cmd Shell
@@ -26,7 +26,7 @@ func (ps *Ps) RunCommand(psCommand string, arguments ...string) (*utils.Output, 
 
 	escapedQuotes := strings.ReplaceAll(command, `"`, `\"`)
 
-	fullCommand := psPath + ` -Command "` + escapedQuotes + `"`
+	fullCommand := PsPath + ` -Command "` + escapedQuotes + `"`
 
 	return ps.cmd.RunCommand(fullCommand)
 }
