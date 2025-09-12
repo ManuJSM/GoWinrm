@@ -9,70 +9,64 @@ import (
 	"path/filepath"
 )
 
-func ZipFileToMemory(filePath string) ([]byte, error) {
-	var buf bytes.Buffer
-	zipWriter := zip.NewWriter(&buf)
+func ZipFileToMemory(sourceDir string) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buf)
 
-	// Abrir archivo fuente
-	srcFile, err := os.Open(filePath)
+	absSource, err := filepath.Abs(sourceDir)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo abrir el archivo: %w", err)
+		return nil, fmt.Errorf("no se pudo obtener ruta absoluta: %w", err)
 	}
-	defer srcFile.Close()
+	baseName := filepath.Base(absSource)
 
-	// Obtener info del archivo para el header
-	info, err := srcFile.Stat()
+	err = filepath.Walk(absSource, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(absSource, path)
+		if err != nil {
+			return err
+		}
+
+		zipPath := filepath.Join(baseName, relPath)
+		zipPath = filepath.ToSlash(zipPath)
+
+		if info.IsDir() {
+			if relPath == "." {
+				return nil
+			}
+			_, err := zipWriter.Create(zipPath + "/")
+			return err
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		header := &zip.FileHeader{
+			Name:   zipPath,
+			Method: zip.Deflate,
+		}
+
+		writer, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(writer, file)
+		return err
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo obtener información del archivo: %w", err)
+		zipWriter.Close()
+		return nil, fmt.Errorf("error al crear zip: %w", err)
 	}
 
-	// Crear encabezado zip
-	header, err := zip.FileInfoHeader(info)
-	if err != nil {
-		return nil, fmt.Errorf("no se pudo crear encabezado zip: %w", err)
-	}
-	header.Name = filepath.Base(filePath)
-	header.Method = zip.Deflate // Comprimir
-
-	// Crear archivo dentro del zip
-	writer, err := zipWriter.CreateHeader(header)
-	if err != nil {
-		return nil, fmt.Errorf("no se pudo crear entrada zip: %w", err)
-	}
-
-	// Copiar contenido del archivo original al zip
-	if _, err := io.Copy(writer, srcFile); err != nil {
-		return nil, fmt.Errorf("no se pudo copiar contenido al zip: %w", err)
-	}
-
-	// Finalizar el zip
 	if err := zipWriter.Close(); err != nil {
 		return nil, fmt.Errorf("error al cerrar zip: %w", err)
 	}
-
-	// Devolver el zip como bytes
 	return buf.Bytes(), nil
-}
-func ReadFileToBuffer(path string) ([]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var buffer []byte
-	temp := make([]byte, 1024)
-
-	for {
-		n, err := file.Read(temp)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if n == 0 {
-			break
-		}
-		buffer = append(buffer, temp[:n]...)
-	}
-
-	return buffer, nil
 }
