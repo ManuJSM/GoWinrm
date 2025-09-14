@@ -10,8 +10,6 @@ import (
 	"github.com/ManuJSM/GoWinrm/internal/wsmv"
 )
 
-const chunkSize = 5800
-
 const (
 	tempPath       = `C:\Windows\Temp`
 	zipTempPath    = tempPath + "\\temp.zip"
@@ -20,14 +18,9 @@ const (
 )
 
 type FileManager struct {
-	shell    shell.Shell
-	uploader *Uploader
-}
-type File struct {
-	SrcPath string
-	DstPath string
-	Utd     bool
-	Size    int64
+	shell      shell.Shell
+	uploader   *Uploader
+	downloader *Downloader
 }
 
 func (fm *FileManager) Close() error {
@@ -37,10 +30,12 @@ func (fm *FileManager) Close() error {
 func NewFileManager(transport transport.Transport, opt *wsmv.SessionOptions) *FileManager {
 	shell := shell.NewCmdShell(transport, opt)
 	uploader := NewUploader(shell)
+	downloader := NewDownloader(shell)
 
 	return &FileManager{
-		shell:    shell,
-		uploader: uploader,
+		shell:      shell,
+		uploader:   uploader,
+		downloader: downloader,
 	}
 }
 

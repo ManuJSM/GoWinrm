@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ZipFileToMemory(sourceDir string) ([]byte, error) {
@@ -69,4 +70,55 @@ func ZipFileToMemory(sourceDir string) ([]byte, error) {
 		return nil, fmt.Errorf("error al cerrar zip: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+func UnzipFile(src string, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return fmt.Errorf("error abriendo archivo zip: %w", err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		fpath := filepath.Join(dest, f.Name)
+
+		// Evita ZipSlip
+		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("archivo ilegal: %s", fpath)
+		}
+
+		if f.FileInfo().IsDir() {
+			err := os.MkdirAll(fpath, os.ModePerm)
+			if err != nil {
+				return fmt.Errorf("error creando directorio: %w", err)
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+			return fmt.Errorf("error creando directorio destino: %w", err)
+		}
+
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return fmt.Errorf("error creando archivo: %w", err)
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			outFile.Close()
+			return fmt.Errorf("error abriendo contenido del archivo zip: %w", err)
+		}
+
+		_, err = io.Copy(outFile, rc)
+
+		outFile.Close()
+		rc.Close()
+
+		if err != nil {
+			return fmt.Errorf("error copiando contenido: %w", err)
+		}
+	}
+
+	return nil
 }

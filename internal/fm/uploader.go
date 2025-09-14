@@ -11,6 +11,8 @@ import (
 	"github.com/ManuJSM/GoWinrm/internal/utils"
 )
 
+const chunkUploadSize = 5800
+
 type Uploader struct {
 	shell shell.Shell
 }
@@ -32,15 +34,16 @@ func (u *Uploader) UploadFile(localpath, dst string) error {
 
 	filename := partes[len(partes)-1]
 	dirCommand := "dir " + dst + filename
+	fmt.Println(dirCommand)
 
 	// Verificar archivos existentes en destino
-	output, err := u.shell.RunCommand(dirCommand)
-	if err != nil {
-		return fmt.Errorf("%v", err)
-	}
-	if output.Stderr.String() == "" {
-		return fmt.Errorf("archivo existe ya en el destino")
-	}
+	// output, err := u.shell.RunCommand(dirCommand)
+	// if err != nil {
+	// 	return fmt.Errorf("%v", err)
+	// }
+	// if output.Stderr.String() != "" {
+	// 	return fmt.Errorf("archivo ya existe en el destino")
+	// }
 
 	// Transferir archivos
 	err = u.streamUpload(file)
@@ -50,7 +53,7 @@ func (u *Uploader) UploadFile(localpath, dst string) error {
 
 	// Extraer archivos comprimidos si es necesario
 	command := fmt.Sprintf(`Expand-Archive -Path '%s' -DestinationPath '%s'`, zipTempPath, dst)
-	output, err = u.shell.RunCommand(shell.PsPath + " -NoProfile -Command " + command)
+	output, err := u.shell.RunCommand(shell.PsPath + " -NoProfile -Command " + command)
 	if err != nil || output.ExitCode != 0 {
 		return fmt.Errorf("error descomprimiendo, %v", output.Stderr.String())
 	}
@@ -68,6 +71,7 @@ func (u *Uploader) prepareFiles(localpath string) ([]byte, error) {
 	if err != nil || output.ExitCode != 0 {
 		return nil, fmt.Errorf("error preparando temps, %v", output.Stderr.String())
 	}
+	//TODO si ya es un zip no zipearlo
 
 	return utils.ZipFileToMemory(localpath)
 }
@@ -76,7 +80,7 @@ func (u *Uploader) streamUpload(buf []byte) error {
 	var sendBytes int64
 	totalSize := len(buf)
 
-	buffer := make([]byte, chunkSize)
+	buffer := make([]byte, chunkUploadSize)
 	reader := bytes.NewReader(buf)
 
 	for {
