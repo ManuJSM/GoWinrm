@@ -122,3 +122,20 @@ func UnzipFile(src string, dest string) error {
 
 	return nil
 }
+
+func IsCompressedFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	compressedExts := map[string]bool{
+		".zip": true,
+		".rar": true,
+		".7z":  true,
+		".tar": true,
+		".gz":  true,
+		".bz2": true,
+		".xz":  true,
+		".tgz": true,
+		".lz":  true,
+	}
+
+	return compressedExts[ext]
+}

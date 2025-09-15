@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ManuJSM/GoWinrm/internal/fm"
 	"github.com/ManuJSM/GoWinrm/internal/shell"
 	"github.com/ManuJSM/GoWinrm/internal/transport"
 	"github.com/ManuJSM/GoWinrm/internal/utils"
@@ -68,6 +69,7 @@ func NewConf(arg utils.Arguments) (*ConnConf, error) {
 type Connection struct {
 	Shell     shell.Shell         // Shell remoto (permite ejecutar comandos)
 	transport transport.Transport // Transporte de red (ej. NTLM sobre HTTP)
+	FileM     *fm.FileManager     // Descargar y subida de archivos
 }
 
 // NewConnection establece una nueva conexión usando configuración ConnConf.
@@ -79,5 +81,6 @@ func NewConnection(connConf *ConnConf) *Connection {
 	return &Connection{
 		transport: t,
 		Shell:     shell.NewPsShell(t, connConf.SessionOptions),
+		FileM:     fm.NewFileManager(t, connConf.SessionOptions),
 	}
 }

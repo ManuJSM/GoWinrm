@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	tempPath       = `C:\Windows\Temp`
-	zipTempPath    = tempPath + "\\temp.zip"
-	base64TempPath = tempPath + "\\temp.b64"
-	binTempPath    = tempPath + "\\temp.bin"
+	tempPath          = `C:\Windows\Temp`
+	remoteZipTempFile = tempPath + "\\temp.zip"
+	base64TempPath    = tempPath + "\\temp.b64"
+	binTempPath       = tempPath + "\\temp.bin"
 )
 
 type FileManager struct {
@@ -24,6 +24,9 @@ type FileManager struct {
 }
 
 func (fm *FileManager) Close() error {
+	fm.downloader.cleanup()
+	fm.uploader.cleanup()
+
 	return fm.shell.Close()
 }
 

@@ -14,7 +14,7 @@ import (
 const chunkDownloadSize = 48024
 const chunkPath = tempPath + "\\chunks_base64"
 
-var zipTempFile = os.TempDir() + "\\temp.zip"
+var localZipTempFile = os.TempDir() + "\\temp.zip"
 
 type Downloader struct {
 	shell shell.Shell
@@ -30,7 +30,7 @@ func NewDownloader(shell shell.Shell) *Downloader {
 func (d *Downloader) prepareDownload(srcPath string) (int, error) {
 	//Create Remote zip
 	createRemoteZip := fmt.Sprintf(`%s -Command "rm %s;Compress-Archive -Path %s -DestinationPath %s"`,
-		shell.PsPath, zipTempPath, srcPath, zipTempPath)
+		shell.PsPath, remoteZipTempFile, srcPath, remoteZipTempFile)
 
 	output, err := d.shell.RunCommand(createRemoteZip)
 	if err != nil || output.ExitCode == 1 {
@@ -39,7 +39,7 @@ func (d *Downloader) prepareDownload(srcPath string) (int, error) {
 
 	//Create Chunks of the zip
 	chunkDivider := fmt.Sprintf(`%s -Command "$chunkSize=%d; $in='%s'; $out='%s'; if (-not (Test-Path $out)) {New-Item -ItemType Directory $out | Out-Null}; $stream=[IO.File]::OpenRead($in); $i=0; $buffer=New-Object byte[] $chunkSize; while (($read=$stream.Read($buffer,0,$chunkSize)) -gt 0) { $chunk = if ($read -eq $chunkSize) { $buffer } else { $buffer[0..($read-1)] }; [IO.File]::WriteAllText(\"$out/chunk$i.b64\", [Convert]::ToBase64String($chunk)); $i++ }; $stream.Close();echo $i"`,
-		shell.PsPath, chunkDownloadSize, zipTempPath, chunkPath)
+		shell.PsPath, chunkDownloadSize, remoteZipTempFile, chunkPath)
 
 	output, err = d.shell.RunCommand(chunkDivider)
 	if err != nil || output.ExitCode == 1 {
@@ -64,8 +64,8 @@ func (d *Downloader) readChunk(n int) ([]byte, error) {
 }
 
 func (d *Downloader) writeZipTemp(chunks int) error {
-	os.Remove(zipTempFile)
-	file, err := os.OpenFile(zipTempFile, os.O_CREATE|os.O_RDWR, 0644)
+	os.Remove(localZipTempFile)
+	file, err := os.OpenFile(localZipTempFile, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
@@ -89,10 +89,11 @@ func (d *Downloader) writeZipTemp(chunks int) error {
 	return nil
 }
 
-func (d *Downloader) cleanup() error {
-	//TODO delete tempsFiles y chunks
+func (d *Downloader) cleanup() {
 
-	return nil
+	d.shell.RunCommand(fmt.Sprintf(`rmdir /s /q "%s" &amp; del %s`, chunkPath, remoteZipTempFile))
+	os.Remove(localZipTempFile)
+
 }
 
 func (d *Downloader) DownloadFile(remotePath, dst string) error {
@@ -108,13 +109,10 @@ func (d *Downloader) DownloadFile(remotePath, dst string) error {
 	}
 
 	//unzip file
-	err = utils.UnzipFile(zipTempFile, dst)
+	err = utils.UnzipFile(localZipTempFile, dst)
 	if err != nil {
 		return err
 	}
-
-	//Clean temp files
-	d.cleanup()
 
 	return nil
 }

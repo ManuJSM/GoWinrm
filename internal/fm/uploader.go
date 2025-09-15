@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strings"
+	"os"
 
 	"github.com/ManuJSM/GoWinrm/internal/shell"
 	"github.com/ManuJSM/GoWinrm/internal/utils"
@@ -30,20 +30,6 @@ func (u *Uploader) UploadFile(localpath, dst string) error {
 	if err != nil {
 		return fmt.Errorf("error preparing files: %v", err)
 	}
-	partes := strings.Split(localpath, `\`)
-
-	filename := partes[len(partes)-1]
-	dirCommand := "dir " + dst + filename
-	fmt.Println(dirCommand)
-
-	// Verificar archivos existentes en destino
-	// output, err := u.shell.RunCommand(dirCommand)
-	// if err != nil {
-	// 	return fmt.Errorf("%v", err)
-	// }
-	// if output.Stderr.String() != "" {
-	// 	return fmt.Errorf("archivo ya existe en el destino")
-	// }
 
 	// Transferir archivos
 	err = u.streamUpload(file)
@@ -52,7 +38,7 @@ func (u *Uploader) UploadFile(localpath, dst string) error {
 	}
 
 	// Extraer archivos comprimidos si es necesario
-	command := fmt.Sprintf(`Expand-Archive -Path '%s' -DestinationPath '%s'`, zipTempPath, dst)
+	command := fmt.Sprintf(`Expand-Archive -Path '%s' -DestinationPath '%s'`, remoteZipTempFile, dst)
 	output, err := u.shell.RunCommand(shell.PsPath + " -NoProfile -Command " + command)
 	if err != nil || output.ExitCode != 0 {
 		return fmt.Errorf("error descomprimiendo, %v", output.Stderr.String())
@@ -61,19 +47,32 @@ func (u *Uploader) UploadFile(localpath, dst string) error {
 	return nil
 
 }
+func (u *Uploader) cleanup() {
+	u.shell.RunCommand("del " + tempPath + "\\temp.*")
+}
 
 func (u *Uploader) prepareFiles(localpath string) ([]byte, error) {
 
 	//Limpiar temps
-	u.shell.RunCommand("del " + tempPath + "\\temp.*")
+	u.cleanup()
 
-	output, err := u.shell.RunCommand(fmt.Sprintf("type nul>%s", zipTempPath))
+	output, err := u.shell.RunCommand(fmt.Sprintf("type nul>%s", remoteZipTempFile))
 	if err != nil || output.ExitCode != 0 {
 		return nil, fmt.Errorf("error preparando temps, %v", output.Stderr.String())
 	}
-	//TODO si ya es un zip no zipearlo
 
+	//Si ya es un zip no zipearlo
+	if utils.IsCompressedFile(localpath) {
+
+		data, err := os.ReadFile(localpath)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+
+	}
 	return utils.ZipFileToMemory(localpath)
+
 }
 
 func (u *Uploader) streamUpload(buf []byte) error {
@@ -94,7 +93,7 @@ func (u *Uploader) streamUpload(buf []byte) error {
 
 		encoded := base64.StdEncoding.EncodeToString(buffer[:n])
 
-		writeScript := fmt.Sprintf("echo %s > %s &amp; certutil -decode %s %s &amp;copy /b %s+%s %s &amp;del %s", encoded, base64TempPath, base64TempPath, binTempPath, zipTempPath, binTempPath, zipTempPath, binTempPath)
+		writeScript := fmt.Sprintf("echo %s > %s &amp; certutil -decode %s %s &amp;copy /b %s+%s %s &amp;del %s", encoded, base64TempPath, base64TempPath, binTempPath, remoteZipTempFile, binTempPath, remoteZipTempFile, binTempPath)
 
 		output, err := u.shell.RunCommand(writeScript)
 		if err != nil || output.ExitCode != 0 {
